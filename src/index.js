@@ -288,13 +288,6 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
 	dryrun && log('Making firestore read-only');
 	proxyWritableMethods();
 
-	const providedApp = app;
-	if (!app) {
-		app = admin.initializeApp({
-			projectId,
-		});
-	}
-
 	const client = await auth.getClient();
 
 	// Impersonate new credentials:
@@ -305,6 +298,21 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
 			delegates: [],
 			targetScopes: ['https://www.googleapis.com/auth/cloud-platform']
 	});
+
+	const providedApp = app;
+	if (!app) {
+		let appOptions = {projectId};
+		if (!process.env.FIRESTORE_EMULATOR_HOST) { // impersonate Firebase services when executed in a non-local environment
+			const {res: {data: {accessToken, expireTime}}} = await targetClient.getAccessToken();
+			appOptions = {...appOptions, credential: {
+				getAccessToken: async () => Promise.resolve({
+					access_token: accessToken,
+					expires_in: Date.parse(expireTime) / 1000,
+				})
+			}}
+		}
+		app = admin.initializeApp(appOptions);
+	}
 
 	const secretManager = new SecretManagerServiceClient({
     projectId,
