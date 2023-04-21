@@ -294,7 +294,7 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
 	let targetClient = new Impersonated({
 			sourceClient: client,
 			targetPrincipal: `main-service-account@${projectId}.iam.gserviceaccount.com`,
-			lifetime: 60*15,
+			lifetime: 30,
 			delegates: [],
 			targetScopes: ['https://www.googleapis.com/auth/cloud-platform']
 	});
