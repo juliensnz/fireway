@@ -8,6 +8,7 @@ const admin = require('firebase-admin');
 const {Firestore, WriteBatch, CollectionReference, FieldValue, FieldPath, Timestamp} = require('@google-cloud/firestore');
 const {GoogleAuth, Impersonated} = require('google-auth-library');
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const { Client: ElasticsearchClient } = require('@elastic/elasticsearch')
 
 const semver = require('semver');
 const asyncHooks = require('async_hooks');
@@ -319,6 +320,8 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
     auth: {getClient: () =>targetClient},
   });
 
+	const elasticsearchClient = await getElasticsearchClient(projectId, secretManager);
+
 	// Use Firestore directly so we can mock for dryruns
 	const firestore = new Firestore({
 		projectId,
@@ -372,7 +375,7 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
 		const success = await trackAsync({log, file, forceWait}, async () => {
 			start = new Date();
 			try {
-				await migration.migrate({firestore, secretManager, projectId, auth: app.auth(), FieldValue, FieldPath, Timestamp, dryrun});
+				await migration.migrate({firestore, elasticsearchClient, secretManager, projectId, auth: app.auth(), FieldValue, FieldPath, Timestamp, dryrun});
 				return true;
 			} catch(e) {
 				log(`Error in ${file.filename}`, e);
@@ -425,4 +428,24 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
 	return stats;
 }
 
-module.exports = {migrate};
+const getElasticsearchClient = async (projectId, secretManager) => {
+	if (projectId === 'local') {
+		return new ElasticsearchClient({
+			node: 'http://localhost:9200',
+		});
+	}
+
+	const [elasticsearchCredentials] = await secretManager.accessSecretVersion({
+		name: `projects/${projectId}/secrets/akeneo_elasticsearch_credentials/versions/latest`,
+	});
+	const {endpoint, apiKey} = JSON.parse(elasticsearchCredentials.payload.data);
+
+	return  new ElasticsearchClient({
+		node: endpoint,
+		auth: {
+			apiKey
+		},
+	});
+}
+
+
