@@ -448,4 +448,4 @@ const getElasticsearchClient = async (projectId, secretManager) => {
 	});
 }
 
-
+module.exports = {migrate};
