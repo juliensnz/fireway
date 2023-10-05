@@ -435,15 +435,17 @@ const getElasticsearchClient = async (projectId, secretManager) => {
 		});
 	}
 
-	const [elasticsearchCredentials] = await secretManager.accessSecretVersion({
-		name: `projects/${projectId}/secrets/akeneo_elasticsearch_credentials/versions/latest`,
+	const [endpointVersion] = await secretManager.accessSecretVersion({
+		name: `projects/${projectId}/secrets/akeneo_elasticsearch_endpoint/versions/latest`,
 	});
-	const {endpoint, apiKey} = JSON.parse(elasticsearchCredentials.payload.data);
+	const [apiKeyVersion] = await secretManager.accessSecretVersion({
+		name: `projects/${projectId}/secrets/akeneo_elasticsearch_api_key/versions/latest`,
+	});
 
 	return  new ElasticsearchClient({
-		node: endpoint,
+		node: endpointVersion.payload.data.toString('utf8'),
 		auth: {
-			apiKey
+			apiKey: apiKeyVersion.payload.data.toString('utf8')
 		},
 	});
 }
