@@ -429,6 +429,9 @@ async function migrate({app, path: dir, projectId, dryrun, debug = false, requir
 }
 
 const getElasticsearchClient = async (projectId, secretManager) => {
+
+	const TIMEOUT_10_MINUTES = 10 * 60 * 1000;
+
 	if (projectId === 'local') {
 		return new ElasticsearchClient({
 			node: 'http://localhost:9200',
@@ -443,11 +446,15 @@ const getElasticsearchClient = async (projectId, secretManager) => {
 	});
 
 	return  new ElasticsearchClient({
-		node: endpointVersion.payload.data.toString('utf8'),
+		node: {
+			url: new URL(endpointVersion.payload.data.toString('utf8')),
+			timeout: TIMEOUT_10_MINUTES
+		},
 		auth: {
 			apiKey: apiKeyVersion.payload.data.toString('utf8')
 		},
-	});
+		requestTimeout: TIMEOUT_10_MINUTES,
+	},);
 }
 
 module.exports = {migrate};
