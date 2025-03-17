@@ -432,7 +432,7 @@ const getElasticsearchClient = async (projectId, secretManager) => {
 
 	const TIMEOUT_10_MINUTES = 10 * 60 * 1000;
 
-	if (projectId === 'local') {
+	if (projectId === 'akeneo-syndication') {
 		return new ElasticsearchClient({
 			node: 'http://localhost:9200',
 		});
